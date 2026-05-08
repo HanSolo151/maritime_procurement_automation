@@ -1,0 +1,9 @@
+{
+    "product_name": "Cargo Hose",
+    "standard": "JIS 10K",
+    "size": "150A",
+    "pcd": "280mm",
+    "holes": 8,
+    "material": "SS316",
+    "pressure_rating": "10 Bar"
+  }

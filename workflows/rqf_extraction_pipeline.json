@@ -1,0 +1,130 @@
+{
+  "name": "RFQ Extraction Pipeline",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-944, -496],
+      "id": "700b34eb-6991-4532-9bbc-aadeafa4f5ce",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4bdf33d6-3d20-4887-b631-a4968664fd1b",
+              "name": "filename",
+              "value": "RFQ-VESSEL-2024-001.pdf",
+              "type": "string"
+            },
+            {
+              "id": "6cbe2550-3b9f-4f19-a27c-2b90899c3bc1",
+              "name": "raw_text",
+              "value": "Cargo Hose JIS 10K 150A PCD 280mm 8 Holes SS316 Material Pressure Rating 10 Bar",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-720, -496],
+      "id": "bd61c2ef-ef44-4720-954a-6cb3d4c0fd1c",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "Maritime Procurement AI"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"tencent/hy3-preview:free\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an industrial procurement extraction engine for maritime vessel parts. The user will give you raw text from a requisition document. Extract EXACTLY these fields: product_name, standard, size, pcd, holes (integer only), material, pressure_rating. Rules: Return ONE JSON object only. No arrays. No multiple objects. No markdown, no code blocks, no explanation, no extra text. If a field is missing from the text, set it to null. Do not invent or guess values not present in the text. Example output: {\\\"product_name\\\":\\\"Cargo Hose\\\",\\\"standard\\\":\\\"JIS 10K\\\",\\\"size\\\":\\\"150A\\\",\\\"pcd\\\":\\\"280mm\\\",\\\"holes\\\":8,\\\"material\\\":\\\"SS316\\\",\\\"pressure_rating\\\":\\\"10 bar\\\"}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{ $json.raw_text }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-512, -496],
+      "id": "2f5f4e57-2b3c-45ee-b6f7-ecb49bc3eaa6",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\n\n// Strip any markdown fences just in case\nconst match = raw.match(/\\{[\\s\\S]*\\}/);\nif (!match) throw new Error(\"No JSON found in AI response: \" + raw);\n\nconst extracted = JSON.parse(match[0]);\n\nreturn [{\n  json: {\n    filename: $('Edit Fields').first().json.filename,\n    ...extracted\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-336, -496],
+      "id": "2194a7d1-aa35-4e0c-a61d-a7add76fbb75",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO requisitions \n  (filename, product_name, standard, size, pcd, holes, material, pressure)\nVALUES \n  ('{{ $json.filename }}',\n   '{{ $json.product_name }}',\n   '{{ $json.standard }}',\n   '{{ $json.size }}',\n   '{{ $json.pcd }}',\n   {{ $json.holes }},\n   '{{ $json.material }}',\n   '{{ $json.pressure_rating }}')\nRETURNING id, product_name, created_at;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-128, -496],
+      "id": "a0dcb7c8-459a-4a91-9fe4-e0dc071d8353",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [[{"node": "Edit Fields", "type": "main", "index": 0}]]
+    },
+    "Edit Fields": {
+      "main": [[{"node": "HTTP Request", "type": "main", "index": 0}]]
+    },
+    "HTTP Request": {
+      "main": [[{"node": "Code in JavaScript", "type": "main", "index": 0}]]
+    },
+    "Code in JavaScript": {
+      "main": [[{"node": "Execute a SQL query", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e230c473-57bc-4e4c-a03d-9c0a0590921f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c80fa9a1898abe489e67d2851db235495b37139a8676ac81fbc3b2f15c65c6b6"
+  },
+  "id": "SJwNa8y6aolZ9Tuv",
+  "tags": []
+}

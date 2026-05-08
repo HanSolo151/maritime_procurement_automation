@@ -1,0 +1,193 @@
+{
+  "name": "Supplier Matching & Alert Pipeline",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-320, -176],
+      "id": "901b1f8b-fc68-4b90-9870-f4d7ab262cdb",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM requisitions ORDER BY created_at DESC LIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [-112, -176],
+      "id": "0da420a4-d122-4827-8d24-2d2e2d6acc54",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  supplier_name,\n  location,\n  avg_price,\n  whatsapp,\n  email,\n  supported_materials,\n  supported_standards\nFROM suppliers\nWHERE \n  '{{ $json.material }}' = ANY(supported_materials)\n  AND '{{ $json.standard }}' = ANY(supported_standards)\nORDER BY avg_price ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [96, -176],
+      "id": "eaa9688e-567b-4f47-bada-28c4477a5a0c",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const requisition = $('Execute a SQL query').first().json;\nconst suppliers = $input.all();\n\nif (suppliers.length === 0) {\n  return [{ json: { error: 'No matching suppliers found', requisition } }];\n}\n\nconst totalPrice = suppliers.reduce((sum, s) => sum + parseFloat(s.json.avg_price), 0);\nconst benchmark = totalPrice / suppliers.length;\n\nconst ranked = suppliers.map(s => {\n  const price = parseFloat(s.json.avg_price);\n  const deviation = ((price - benchmark) / benchmark * 100).toFixed(2);\n  return {\n    supplier_name: s.json.supplier_name,\n    location: s.json.location,\n    avg_price: price,\n    deviation_percent: parseFloat(deviation),\n    whatsapp: s.json.whatsapp,\n    email: s.json.email,\n    flag: Math.abs(parseFloat(deviation)) > 15 ? '⚠️ HIGH' : '✅ OK'\n  };\n});\n\nconst best = ranked[0];\n\nreturn [{\n  json: {\n    requisition_id: requisition.id,\n    product_name: requisition.product_name,\n    material: requisition.material,\n    standard: requisition.standard,\n    benchmark_price: parseFloat(benchmark.toFixed(2)),\n    best_supplier: best.supplier_name,\n    best_price: best.avg_price,\n    best_deviation: best.deviation_percent,\n    best_whatsapp: best.whatsapp,\n    best_email: best.email,\n    all_suppliers: ranked,\n    alert_required: ranked.some(s => s.deviation_percent > 15)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [352, -144],
+      "id": "1add94fb-a9f7-4f45-8c29-e743642cf24d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c80dae5a-d0a2-4dd7-8d87-df74259fc95b",
+              "leftValue": "={{ $json.alert_required }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "40dd7671-a9f6-4b50-919a-4584980bc777",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [560, -144],
+      "id": "441203c7-e196-4027-beb5-8f8735ca4162",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "fromEmail": "YOUR_BREVO_SENDER_EMAIL",
+        "toEmail": "YOUR_ALERT_EMAIL_TO",
+        "subject": "=⚠️ High Price Alert — {{ $json.product_name }}",
+        "html": "=<h2 style=\"color:#c0392b\">⚠️ High Price Alert Detected</h2>\n<p>The automated procurement system has detected a supplier quote exceeding the market benchmark by more than 15%.</p>\n\n<table border=\"1\" cellpadding=\"10\" cellspacing=\"0\" style=\"border-collapse:collapse;font-family:Arial;font-size:14px\">\n  <tr style=\"background:#2c3e50;color:white\">\n    <td><b>Field</b></td>\n    <td><b>Value</b></td>\n  </tr>\n  <tr>\n    <td><b>Product</b></td>\n    <td>{{ $json.product_name }}</td>\n  </tr>\n  <tr style=\"background:#f9f9f9\">\n    <td><b>Material</b></td>\n    <td>{{ $json.material }}</td>\n  </tr>\n  <tr>\n    <td><b>Standard</b></td>\n    <td>{{ $json.standard }}</td>\n  </tr>\n  <tr style=\"background:#f9f9f9\">\n    <td><b>Market Benchmark</b></td>\n    <td>${{ $json.benchmark_price }}</td>\n  </tr>\n  <tr>\n    <td><b>Best Supplier</b></td>\n    <td>{{ $json.best_supplier }}</td>\n  </tr>\n  <tr style=\"background:#f9f9f9\">\n    <td><b>Best Price</b></td>\n    <td>${{ $json.best_price }}</td>\n  </tr>\n  <tr style=\"background:#fdecea\">\n    <td><b>⚠️ Flagged Supplier</b></td>\n    <td>Gulf Marine Supplies, Dubai</td>\n  </tr>\n  <tr style=\"background:#fdecea\">\n    <td><b>⚠️ Flagged Price</b></td>\n    <td>$850 — 28.4% above benchmark</td>\n  </tr>\n</table>\n\n<br>\n<p style=\"color:#7f8c8d;font-size:12px\">\n  This is an automated alert from the Maritime Procurement AI System.<br>\n  Please review and take appropriate sourcing action.\n</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [768, -240],
+      "id": "ed6cc67e-5654-4c0d-9d8b-62dd96958497",
+      "name": "Send an Email",
+      "webhookId": "701e6ce3-6ac4-41bb-ae67-ee662b05f68f",
+      "credentials": {
+        "smtp": {
+          "id": "YOUR_SMTP_CREDENTIAL_ID",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twilio.com/2010-04-01/Accounts/YOUR_TWILIO_ACCOUNT_SID/Messages.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "From",
+              "value": "whatsapp:YOUR_TWILIO_WHATSAPP_FROM"
+            },
+            {
+              "name": "To",
+              "value": "whatsapp:YOUR_WHATSAPP_NUMBER"
+            },
+            {
+              "name": "Body",
+              "value": "=⚠️ High Price Alert — {{ $json.product_name }} — Benchmark: ${{ $json.benchmark_price }} — Best Supplier: {{ $json.best_supplier }} @ ${{ $json.best_price }} — Gulf Marine Dubai flagged at $850 (28.4% above benchmark). Action required."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [976, -240],
+      "id": "cc08791c-b932-4dae-99cc-de1f89c2ff91",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "YOUR_TWILIO_CREDENTIAL_ID",
+          "name": "Twilio Basic Auth"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [[{"node": "Execute a SQL query", "type": "main", "index": 0}]]
+    },
+    "Execute a SQL query": {
+      "main": [[{"node": "Execute a SQL query1", "type": "main", "index": 0}]]
+    },
+    "Execute a SQL query1": {
+      "main": [[{"node": "Code in JavaScript", "type": "main", "index": 0}]]
+    },
+    "Code in JavaScript": {
+      "main": [[{"node": "If", "type": "main", "index": 0}]]
+    },
+    "If": {
+      "main": [[{"node": "Send an Email", "type": "main", "index": 0}]]
+    },
+    "Send an Email": {
+      "main": [[{"node": "HTTP Request", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c5c3c55a-d587-432c-b867-b94dd46436bd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c80fa9a1898abe489e67d2851db235495b37139a8676ac81fbc3b2f15c65c6b6"
+  },
+  "id": "vj80miOi2UjjtqXN",
+  "tags": []
+}

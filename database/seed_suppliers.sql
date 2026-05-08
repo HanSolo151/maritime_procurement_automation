@@ -1,0 +1,16 @@
+INSERT INTO suppliers (supplier_name, location, supported_materials, supported_standards, avg_price, whatsapp, email) VALUES
+('Gulf Marine Supplies', 'Dubai', ARRAY['SS316','CS','GI'], ARRAY['JIS 10K','ANSI 150','DIN PN16'], 850, '+971501234567', 'sales@gulfmarine.ae'),
+('Al Faris Industrial', 'Dubai', ARRAY['SS304','SS316','Rubber'], ARRAY['ANSI 150','ANSI 300','BS 10'], 780, '+971507654321', 'procurement@alfaris.ae'),
+('Dubai Marine Parts', 'Dubai', ARRAY['CS','GI','Copper'], ARRAY['JIS 10K','JIS 5K','BS 10'], 720, '+971509876543', 'info@dubaimarineparts.ae'),
+('Emirates Valve Co', 'Dubai', ARRAY['SS316','Inconel','Hastelloy'], ARRAY['ANSI 150','ANSI 300','ANSI 600'], 1200, '+971502468135', 'sales@emiratesvalve.ae'),
+('Horizon Marine Dubai', 'Dubai', ARRAY['SS304','CS','Rubber'], ARRAY['DIN PN16','DIN PN25','EN 1092'], 890, '+971508642097', 'supply@horizonmarine.ae'),
+('Kandla Marine Traders', 'Kandla', ARRAY['SS316','CS','GI'], ARRAY['JIS 10K','IS 6392','ANSI 150'], 620, '+919824512345', 'kandlamarine@gmail.com'),
+('Kandla Hose Tech', 'Kandla', ARRAY['Rubber','EPDM','NBR'], ARRAY['ANSI 150','IS 6392','BS 10'], 480, '+919824678901', 'sales@kandlahose.in'),
+('Gujarat Marine Supplies', 'Kandla', ARRAY['SS304','SS316','CS'], ARRAY['JIS 10K','JIS 5K','ANSI 150'], 590, '+919825001234', 'info@gujaratmarine.in'),
+('Deendayal Port Traders', 'Kandla', ARRAY['CS','GI','Copper'], ARRAY['IS 6392','BS 10','DIN PN16'], 510, '+919824789012', 'dpt.kandla@gmail.com'),
+('Sealink Marine India', 'Kandla', ARRAY['SS316','Rubber','CS'], ARRAY['ANSI 150','ANSI 300','JIS 10K'], 650, '+919825123456', 'procurement@sealink.in'),
+('Ravi Marine Equipment', 'Kandla', ARRAY['SS304','CS','GI'], ARRAY['JIS 10K','IS 6392','BS 10'], 570, '+919824901234', 'ravi.marine@gmail.com'),
+('Petroline Gulf FZCO', 'Dubai', ARRAY['Hastelloy','Inconel','SS316'], ARRAY['ANSI 300','ANSI 600','API 6A'], 1800, '+971503691470', 'tenders@petrolinegulf.ae'),
+('Western India Marine', 'Kandla', ARRAY['Rubber','EPDM','CS'], ARRAY['IS 6392','ANSI 150','BS 10'], 530, '+919825234567', 'wim.supplies@gmail.com'),
+('Gulf Valve & Fitting', 'Dubai', ARRAY['SS316','CS','Bronze'], ARRAY['ANSI 150','BS 10','DIN PN16'], 960, '+971504812593', 'sales@gulfvalve.ae'),
+('Marineserv Kandla', 'Kandla', ARRAY['SS304','SS316','GI'], ARRAY['JIS 5K','JIS 10K','ANSI 150'], 600, '+919824345678', 'marineserv.kandla@gmail.com');

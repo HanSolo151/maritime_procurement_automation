@@ -1,0 +1,7 @@
+
+
+psycopg2-binary==2.9.9      # PostgreSQL connector
+python-dotenv==1.0.0         # Environment variable management
+requests==2.31.0             # HTTP client for API calls
+pandas==2.1.0                # Data processing for reporting
+openpyxl==3.1.2              # Excel export for procurement reports
